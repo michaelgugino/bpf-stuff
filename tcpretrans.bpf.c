@@ -79,42 +79,82 @@ int tracepoint__tcp__tcp_retransmit_skb(struct trace_event_raw_tcp_event_sk_skb*
     bpf_printk("BPF triggered from tcp_retransmit_skb\n");
 
     struct event *e;
+    const struct sock *skp;
+    __u16 dport;
+    __u16 sport;
+    __u32 family;
+    // char state;
+    int state;
 
     // Reserve memory for our event, or return 0 if no space
 	e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
 	if (!e)
 		return 0;
 
-    // u32 pid = bpf_get_current_pid_tgid() >> 32;
-    // pull in details
-    // const struct sock *skp = (const struct sock *)ctx->skaddr;
-    const struct sock *skp = BPF_CORE_READ(ctx, skaddr);
-    u32 family = BPF_CORE_READ(skp, __sk_common.skc_family);
+
+    /*
+    const struct sk_buff *skb = BPF_CORE_READ(ctx, skbaddr);
+    u64 pid2 = 0;
+    struct pid *p;
+    if (skb != NULL) {
+        bpf_printk("skb not null");
+        struct fown_struct f_owner = BPF_CORE_READ(skb,sk,sk_socket,file,f_owner);
+        p = f_owner.pid;
+
+        // Complier complains about this.
+        // p = BPF_CORE_READ(skb,sk,sk_socket,file,f_owner,pid)
+
+        // This always prints zero?
+        bpf_printk("p pointer %d", p);
+        if (p) {
+            bpf_printk("p pointer not null");
+            pid2 = BPF_CORE_READ(p,numbers[0].nr);
+        }
+    }
+    bpf_printk("BPF PID: %d", pid2);
+    */
+
+    // These values are garbage
+    /*
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+	u32 pid = pid_tgid >> 32;
+    e->pid = pid;
+    e->uid = bpf_get_current_uid_gid();
+    bpf_get_current_comm(&e->task, sizeof(e->task));
+    */
+
+    skp = BPF_CORE_READ(ctx, skaddr);
+    family = BPF_CORE_READ(skp, __sk_common.skc_family);
     e->af = family;
-    e->pid = 7;
+    e->ts_us = bpf_ktime_get_ns() / 1000;
+    // __sk_common.skc_dport is in network byte order
+    // BPF_CORE_READ_INTO(&dport, skp, __sk_common.skc_dport);
+
+    // tcp_event_sk_skb.dport already in host byte order
+    BPF_CORE_READ_INTO(&dport, ctx, dport);
+	e->dport = dport;
+    BPF_CORE_READ_INTO(&sport, ctx, sport);
+    e->sport = sport;
+    // state = BPF_CORE_READ(skp, __sk_common.skc_state);
+    state = BPF_CORE_READ(ctx, state);
+    e->state = state;
+
     // The following doesn't work as it throws invalid memory access error
     // "R1 invalid mem access 'inv'"
     // u16 family = skp->__sk_common.skc_family;
-    /*
-    u16 lport = skp->__sk_common.skc_num;
-    u16 dport = skp->__sk_common.skc_dport;
-    char state = skp->__sk_common.skc_state;
-    */
     if (family == AF_INET) {
         bpf_printk("BPF for ipv4\n");
+        e->saddr_v4 = BPF_CORE_READ(skp, __sk_common.skc_rcv_saddr);
+        e->daddr_v4 = BPF_CORE_READ(skp, __sk_common.skc_daddr);
 
     } else if (family == AF_INET6) {
         bpf_printk("BPF for ipv6\n");
+        BPF_CORE_READ_INTO(e->saddr_v6, skp,
+                   __sk_common.skc_v6_rcv_saddr.in6_u.u6_addr32);
+        BPF_CORE_READ_INTO(e->daddr_v6, skp,
+                   __sk_common.skc_v6_daddr.in6_u.u6_addr32);
     }
-    /*
-    // else drop
-    return 0;
-    BPF_CORE_READ_INTO(&dport, sk, __sk_common.skc_dport);
-    if (ip_ver == 4)
-        trace_v4(ctx, pid, sk, dport);
-    else
-        trace_v6(ctx, pid, sk, dport);
-    */
+
     bpf_ringbuf_submit(e, 0);
     return 0;
 }

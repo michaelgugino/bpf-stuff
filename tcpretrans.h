@@ -9,19 +9,7 @@
 /* The maximum number of ports to filter */
 #define MAX_PORTS 64
 
-#define TASK_COMM_LEN 16
-
-struct ipv4_flow_key {
-	__u32 saddr;
-	__u32 daddr;
-	__u16 dport;
-};
-
-struct ipv6_flow_key {
-	__u8 saddr[16];
-	__u8 daddr[16];
-	__u16 dport;
-};
+// #define TASK_COMM_LEN 16
 
 struct event {
 	union {
@@ -32,12 +20,15 @@ struct event {
 		__u32 daddr_v4;
 		__u8 daddr_v6[16];
 	};
-	char task[TASK_COMM_LEN];
+	// char task[TASK_COMM_LEN]; // garbage value
 	__u64 ts_us;
 	__u32 af; // AF_INET or AF_INET6
-	__u32 pid;
-	__u32 uid;
+	// __u32 pid; // garbage value
+	// __u32 uid; // garbage value
 	__u16 dport;
+    __u16 sport;
+    // char state;
+    int state;
 };
 
 #endif /* __TCPRETRANS_H */

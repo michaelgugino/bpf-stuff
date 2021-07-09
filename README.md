@@ -48,3 +48,23 @@ However, this structure has been backported to RHEL 8.4, so I can use it fine.
 Current Fedora releases contain it as well (I'm on F33 ATM).
 
 `./libbpf-tools/bin/bpftool btf dump file /sys/kernel/btf/vmlinux format c > libbpf-tools/x86/vmlinux_$(uname -r).h`
+
+## PID garbage
+
+While possibly other tracepoints and kernel probes will yield useful (userspace)
+process ID information, tcp events often do not.
+
+## Dynamic lib build
+
+libbpf is compiled statically by default, instead of being a shared lib.
+
+```
+# modify makefile and build libbpf in dynamic mode.
+# modify makefile and build bpf helpers with -fpic
+# first, we compile our dynamic lib
+cc -Wall -fpic -I.output  -I../src/cc/libbpf/include/uapi/ -c tcpretranslib.c -o .output/tcpretranslib.o
+# next, we link all out our code when creating the .so
+cc -shared -o .output/libtcpretranslib.so .output/tcpretranslib.o -lelf .output/errno_helpers.o .output/map_helpers.o .output/syscall_helpers.o .output/uprobe_helpers.o .output/trace_helpers.o -L .output -lbpf
+# finally, we compile a program that uses our shared lib.
+cc -Wall -o tcpretransmain tcpretransmain.c -ltcpretranslib -L.output
+```
