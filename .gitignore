@@ -1,2 +1,4 @@
 *.o
 libbpf-tools/.output/
+libbpf-tools/tcpretransmain
+bpf-stuff
