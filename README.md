@@ -68,3 +68,18 @@ cc -shared -o .output/libtcpretranslib.so .output/tcpretranslib.o -lelf .output/
 # finally, we compile a program that uses our shared lib.
 cc -Wall -o tcpretransmain tcpretransmain.c -ltcpretranslib -L.output
 ```
+
+The above will result in creating a shared lib which depends on a libbpf.so
+installed somewhere on your system.
+
+If you want to have a more portable shared lib without having to ship/install
+libbpf.so, you can modify the libbpf Makefile itself and run the following
+step instead:
+```
+cc -shared -o .output/libtcpretranslib.so .output/tcpretranslib.o -lelf .output/errno_helpers.o .output/map_helpers.o .output/syscall_helpers.o .output/uprobe_helpers.o .output/trace_helpers.o -L .output -Wl,--no-undefined -lz .output/libbpf.a
+```
+
+This second method is probably totally unnecessary in most cases.  If you're
+already creating a shared library, you're probably shipping more than one binary
+and it's not a big deal to ship libbpf and your shared lib together with
+whatever is consuming them.
