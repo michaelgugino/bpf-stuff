@@ -16,8 +16,44 @@ $(error Architecture $(ARCH) is not supported yet. Please open an issue)
 endif
 
 APPS = \
-	libtcpretrans \
+	bindsnoop \
+	biolatency \
+	biopattern \
+	biosnoop \
+	biostacks \
+	bitesize \
+	cachestat \
+	cpudist \
+	cpufreq \
+	drsnoop \
+	execsnoop \
+	filelife \
+	fsdist \
+	fsslower \
+	funclatency \
+	gethostlatency \
+	hardirqs \
+	llcstat \
+	numamove \
+	offcputime \
+	opensnoop \
+	readahead \
+	runqlat \
+	runqlen \
+	runqslower \
+	softirqs \
+	solisten \
+	statsnoop \
+	syscount \
+	tcpconnect \
+	tcpconnlat \
+	tcpretrans \
+	vfsstat \
 	#
+
+FSDIST_ALIASES = btrfsdist ext4dist nfsdist xfsdist
+FSSLOWER_ALIASES = btrfsslower ext4slower nfsslower xfsslower
+APP_ALIASES = $(FSDIST_ALIASES) $(FSSLOWER_ALIASES)
 
 COMMON_OBJ = \
 	$(OUTPUT)/trace_helpers.o \
@@ -28,7 +64,7 @@ COMMON_OBJ = \
 	#
 
 .PHONY: all
-all: $(APPS)
+all: $(APPS) $(APP_ALIASES)
 
 ifeq ($(V),1)
 Q =
@@ -42,26 +78,31 @@ endif
 .PHONY: clean
 clean:
 	$(call msg,CLEAN)
-	$(Q)rm -rf $(OUTPUT) $(APPS)
+	$(Q)rm -rf $(OUTPUT) $(APPS) $(APP_ALIASES)
 
 $(OUTPUT) $(OUTPUT)/libbpf:
 	$(call msg,MKDIR,$@)
 	$(Q)mkdir -p $@
 
+$(APPS): %: $(OUTPUT)/%.o $(LIBBPF_OBJ) $(COMMON_OBJ) | $(OUTPUT)
+	$(call msg,BINARY,$@)
+	echo $(Q)$(CC) $(CFLAGS) $^ $(LDFLAGS) -lelf -lz -o $@
 
-$(OUTPUT)/tcpretrans.skel.h: $(OUTPUT)/tcpretrans.bpf.o | $(OUTPUT)
-	$(call msg,GEN-SKEL,$@)
-	$(Q)$(BPFTOOL) gen skeleton $< > $@
-
-$(OUTPUT)/tcpretrans.bpf.o: tcpretrans.bpf.c $(LIBBPF_OBJ) $(wildcard %.h) $(ARCH)/vmlinux.h | $(OUTPUT)
-	$(call msg,BPF,$@)
-	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(ARCH)		      \
-		     -I$(ARCH)/ $(INCLUDES) -c $(filter %.c,$^) -o $@ &&      \
-	$(LLVM_STRIP) -g $@
+$(patsubst %,$(OUTPUT)/%.o,$(APPS)): %.o: %.skel.h
 
 $(OUTPUT)/%.o: %.c $(wildcard %.h) $(LIBBPF_OBJ) | $(OUTPUT)
 	$(call msg,CC,$@)
 	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -c $(filter %.c,$^) -o $@
+
+$(OUTPUT)/%.skel.h: $(OUTPUT)/%.bpf.o | $(OUTPUT)
+	$(call msg,GEN-SKEL,$@)
+	$(Q)$(BPFTOOL) gen skeleton $< > $@
+
+$(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(wildcard %.h) $(ARCH)/vmlinux.h | $(OUTPUT)
+	$(call msg,BPF,$@)
+	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(ARCH)		      \
+		     -I$(ARCH)/ $(INCLUDES) -c $(filter %.c,$^) -o $@ &&      \
+	$(LLVM_STRIP) -g $@
 
 # Build libbpf.a
 $(LIBBPF_OBJ): $(wildcard $(LIBBPF_SRC)/*.[ch]) | $(OUTPUT)/libbpf
@@ -71,20 +112,19 @@ $(LIBBPF_OBJ): $(wildcard $(LIBBPF_SRC)/*.[ch]) | $(OUTPUT)/libbpf
 		    INCLUDEDIR= LIBDIR= UAPIDIR=			      \
 		    install
 
-# Build libtcpretrans.
-$(OUTPUT)/libtcpretrans.a:
-	$(Q)ar -rvs .output/libtcpretrans.a .output/libbpf/staticobjs/*.o \
-	.output/trace_helpers.o .output/syscall_helpers.o .output/errno_helpers.o \
-	.output/map_helpers.o .output/uprobe_helpers.o .output/libtcpretrans.o
+$(FSSLOWER_ALIASES): fsslower
+	$(call msg,SYMLINK,$@)
+	$(Q)ln -f -s $^ $@
 
-.PHONY: libtcpretrans
-libtcpretrans: \
-	$(LIBBPF_OBJ) \
-	$(OUTPUT)/tcpretrans.skel.h \
-	$(COMMON_OBJ) \
-	$(OUTPUT)/libtcpretrans.o \
-	$(OUTPUT)/libtcpretrans.a
+$(FSDIST_ALIASES): fsdist
+	$(call msg,SYMLINK,$@)
+	$(Q)ln -f -s $^ $@
 
+install: $(APPS) $(APP_ALIASES)
+	$(call msg, INSTALL libbpf-tools)
+	$(Q)$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/bin
+	$(Q)$(INSTALL) $(APPS) $(DESTDIR)$(prefix)/bin
+	$(Q)cp -a $(APP_ALIASES) $(DESTDIR)$(prefix)/bin
 
 # delete failed targets
 .DELETE_ON_ERROR:

@@ -84,17 +84,21 @@ already creating a shared library, you're probably shipping more than one binary
 and it's not a big deal to ship libbpf and your shared lib together with
 whatever is consuming them.
 
-# cgo
+# cgo info
+
+Helpful steps: https://github.com/lxwagn/using-go-with-c-libraries
 
 Compiling as a static library.
 
 ```
-cc -Wall -I.output  -I../src/cc/libbpf/include/uapi/ -c tcpretranslib.c -o .output/tcpretranslib.o
+cc -Wall -I.output  -I../src/cc/libbpf/include/uapi/ -c libtcpretrans.c -o .output/libtcpretrans.o
 
-ar -rvs .output/libtcpretranslib.a .output/libbpf/staticobjs/*.o .output/trace_helpers.o .output/syscall_helpers.o .output/errno_helpers.o .output/map_helpers.o .output/uprobe_helpers.o .output/tcpretranslib.o
+ar -rvs .output/libtcpretrans.a .output/libbpf/staticobjs/*.o .output/trace_helpers.o .output/syscall_helpers.o .output/errno_helpers.o .output/map_helpers.o .output/uprobe_helpers.o .output/libtcpretrans.o
 ```
 
-Next, copy all the `libbpf-tools/*.h1` files into `libbpf-tools/.output`
-so they are available to go.
-
 Checkout main.go for the steps to link and utilize the code.
+Just use `go build` to build.
+
+# cgo building
+
+Now there is a Makefile in libbpf-tools.  Just make that, then build main.go.

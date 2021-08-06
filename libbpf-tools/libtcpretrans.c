@@ -18,24 +18,18 @@
 #include <unistd.h>
 #include <time.h>
 #include <bpf/bpf.h>
+#include "libtcpretrans.h"
 #include "tcpretrans.h"
 #include "tcpretrans.skel.h"
 #include "trace_helpers.h"
 #include "map_helpers.h"
 
-#define warn(...) fprintf(stderr, __VA_ARGS__)
 
-const char *argp_program_version = "tcpretrans 0.1";
-const char *argp_program_bug_address =
-	"https://github.com/iovisor/bcc/tree/master/libbpf-tools";
-static const char argp_program_doc[] =
-	"\ntcpretrans: Trace TCP retransmits\n"
-	"\n"
-	"EXAMPLES:\n"
-	"    tcpretrans		# display all TCP retransmissions\n"
-	"    tcpretrans -c	# count occurred retransmits per flow\n"
-	"    tcpretrans -l	# include tail loss probe attempts\n"
-	;
+// extern informs the compiler that this function will be satifies at linking
+// time which in our case is handled by cgo.
+extern void gocb(int);
+
+#define warn(...) fprintf(stderr, __VA_ARGS__)
 
 const char* tppath = "/sys/kernel/debug/tracing/events/tcp/tcp_retransmit_skb/id";
 
@@ -60,15 +54,6 @@ static void sig_int(int signo)
 {
 	hang_on = 0;
 }
-
-static const struct argp_option opts[] = {
-	{ "verbose", 'v', NULL, 0, "Verbose debug output" },
-	{ "count", 'c', NULL, 0, "Count connects per src ip and dst ip/port" },
-	{ "lossprobe", 'l', NULL, 0, "include tail loss probe attempts" },
-	{ "kprobe", 'k', NULL, 0, "force kprobe instead of tracepoint" },
-	{ NULL, 'h', NULL, OPTION_HIDDEN, "Show the full help" },
-	{},
-};
 
 static struct env {
 	bool verbose;
@@ -163,6 +148,8 @@ static void print_events_header()
 
 static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
 {
+
+	gocb(999);
 	const struct event *e = data;
 	struct tm *tm;
 	char ts[32];
@@ -239,9 +226,8 @@ cleanup:
 	perf_buffer__free(pb);
 }
 
-int run(int argc, char **argv)
+int run()
 {
-
 	struct tcpretrans_bpf *obj;
 	int err, tpmissing;
 	struct bpf_program *prog;
