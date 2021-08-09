@@ -1,0 +1,24 @@
+FROM registry.ci.openshift.org/ocp/builder:rhel-8-golang-1.15-openshift-4.8 AS builder
+WORKDIR /go/src/github.com/michaelgugino/bpf-stuff
+COPY . .
+RUN INSTALL_PKGS="\
+    clang \
+    elfutils-libelf \
+    elfutils-libelf-devel \
+    llvm \
+    make \
+    zlib \
+    " && \
+    yum -y install --setopt=tsflags=nodocs --setopt=skip_missing_names_on_install=False $INSTALL_PKGS && \
+    yum clean all && rm -rf /var/cache/*
+RUN cd /go/src/github.com/michaelgugino/bpf-stuff/libbpf-tools && make clean && make
+RUN cd /go/src/github.com/michaelgugino/bpf-stuff && go build .
+
+FROM registry.ci.openshift.org/ocp/4.8:tools
+RUN INSTALL_PKGS="\
+    elfutils-libelf \
+    zlib \
+    " && \
+    yum -y install --setopt=tsflags=nodocs --setopt=skip_missing_names_on_install=False $INSTALL_PKGS && \
+    yum clean all && rm -rf /var/cache/*
+COPY --from=builder /go/src/github.com/michaelgugino/bpf-stuff/bpf-stuff tcpretransstat

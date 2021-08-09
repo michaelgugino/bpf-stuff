@@ -102,3 +102,10 @@ Just use `go build` to build.
 # cgo building
 
 Now there is a Makefile in libbpf-tools.  Just make that, then build main.go.
+
+# container bits
+
+You can use the Dockerfile.rhel if you have suitable access to those images.
+Fedora image WIP.
+
+podman run --privileged -v /sys/kernel/debug/:/sys/kernel/debug/:ro -it 9113e82f2af3f55c6bed3b57a8b6605b444a5e27677aa3b1c5076edbc0548822 /bin/bash

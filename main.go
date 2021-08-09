@@ -9,33 +9,34 @@ import "C"
 
 import (
 	"fmt"
+	"net/http"
     "os"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// race detector will complain, but we only write from a single source, no need
-// to block.
-var count = 0
-
-func pcount() {
-	for ;; {
-		fmt.Println("count: ", count)
-		time.Sleep(1 * time.Second)
-	}
-}
+var (
+        tcpretranscount = promauto.NewCounter(prometheus.CounterOpts{
+                Name: "tcpretranscount",
+                Help: "The total number of tcpretrans kernel events",
+        })
+)
 
 // The export statement makes the function available to C
 //export gocb
 func gocb(arg1 int) {
 	// TODO: modify this function to accept an entire event for extra
 	// processing.
-    fmt.Println("found: ", arg1)
-	count++
+    tcpretranscount.Inc()
 }
 
 func main() {
 
-	fmt.Println("-------------------------------")
-	go pcount()
+
+    http.Handle("/metrics", promhttp.Handler())
+    go http.ListenAndServe(":2112", nil)
 	os.Exit(int(C.run()))
 }
