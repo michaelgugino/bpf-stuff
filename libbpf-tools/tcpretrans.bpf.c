@@ -90,9 +90,10 @@ static int trace_event(void *ctx, const struct sock *skp, int type)
 	__u64 pid_tgid;
 	__u32 pid;
 	int state;
+	u32 saddr;
+	u32 daddr;
 
 	family = BPF_CORE_READ(skp, __sk_common.skc_family);
-	e.af = family;
 
 	if (do_count) {
 		if (family == AF_INET)
@@ -112,13 +113,23 @@ static int trace_event(void *ctx, const struct sock *skp, int type)
 	state = BPF_CORE_READ(skp, __sk_common.skc_state);
 	e.state = state;
 
-	if (family == AF_INET) {
+
+	BPF_CORE_READ_INTO(&saddr, skp, __sk_common.skc_rcv_saddr);
+	BPF_CORE_READ_INTO(&daddr, skp, __sk_common.skc_daddr);
+
+	if (saddr != 0 || daddr != 0) {
+		e.af = family;
+	} else {
+		e.af = family;
+	}
+
+	if (e.af == AF_INET) {
 		BPF_CORE_READ_INTO(&e.saddr, skp, __sk_common.skc_rcv_saddr);
 		BPF_CORE_READ_INTO(&e.daddr, skp, __sk_common.skc_daddr);
-	} else if (family == AF_INET6) {
-		BPF_CORE_READ_INTO(e.saddr, skp,
+	} else if (e.af == AF_INET6) {
+		BPF_CORE_READ_INTO(&e.saddr, skp,
 				   __sk_common.skc_v6_rcv_saddr.in6_u.u6_addr32);
-		BPF_CORE_READ_INTO(e.daddr, skp,
+		BPF_CORE_READ_INTO(&e.daddr, skp,
 				   __sk_common.skc_v6_daddr.in6_u.u6_addr32);
 	}
 	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU,
@@ -126,12 +137,35 @@ static int trace_event(void *ctx, const struct sock *skp, int type)
 	return 0;
 }
 
+/*
+static inline unsigned char *skb_network_header(const struct sk_buff *skb)
+{
+	return BPF_CORE_READ(skb, head) + BPF_CORE_READ(skb, network_header);
+}
+
+static inline struct iphdr *ip_hdr(const struct sk_buff *skb)
+{
+	return (struct iphdr *)skb_network_header(skb);
+}
+*/
+
 SEC("tp/tcp/tcp_retransmit_skb")
 int tracepoint__tcp__tcp_retransmit_skb(struct trace_event_raw_tcp_event_sk_skb* ctx)
 {
 	const struct sock *skp;
-
+	const struct sk_buff *skb;
+	const struct iphdr *iph;
+	__u8 version;
+	bpf_printk("tracing .\n");
 	skp = BPF_CORE_READ(ctx, skaddr);
+	skb = BPF_CORE_READ(ctx, skbaddr);
+	// iph = ip_hdr(skb);
+	iph = (struct iphdr *) BPF_CORE_READ(skb, head) + BPF_CORE_READ(skb, network_header);
+	// version = iph->version;
+	bpf_printk("skb head %d.\n", (__u64)BPF_CORE_READ(skb, head));
+	bpf_printk("skb network_header %d.\n", (__u64)BPF_CORE_READ(skb, network_header));
+	bpf_printk("skb iph %d.\n", (__u64)iph);
+
 	return trace_event(ctx, skp, RETRANSMIT);
 }
 

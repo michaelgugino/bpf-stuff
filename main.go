@@ -4,6 +4,7 @@ package main
 #cgo CFLAGS: -I./libbpf-tools
 #cgo LDFLAGS: -L./libbpf-tools/.output -lelf -lz -ltcpretrans
 #include "libtcpretrans.h"
+#include <stdio.h>
 */
 import "C"
 
@@ -34,5 +35,7 @@ func gocb(arg1 int) {
 func main() {
     http.Handle("/metrics", promhttp.Handler())
     go http.ListenAndServe(":2112", nil)
-	os.Exit(int(C.run()))
+	ret := int(C.run())
+	C.fflush(C.stdout)
+	os.Exit(ret)
 }

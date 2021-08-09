@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: tcpretransmetric-daemon
+  namespace: openshift-machine-config-operator
+spec:
+  selector:
+    matchLabels:
+      k8s-app: tcpretransmetric-daemon
+  template:
+    metadata:
+      annotations:
+        target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+      creationTimestamp: null
+      labels:
+        k8s-app: tcpretransmetric-daemon
+      name: tcpretransmetric-daemon
+    spec:
+      containers:
+      - command:
+        - /tcpretransstat
+        image: quay.io/mgugino.redhat/bpf-stuff:latest
+        imagePullPolicy: Always
+        name: tcpretransmetric-daemon
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /sys/kernel/debug/
+          name: kerneldebug
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      tolerations:
+      - operator: Exists
+      volumes:
+      - hostPath:
+          path: /sys/kernel/debug/
+          type: ""
+        name: kerneldebug
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 10%
+    type: RollingUpdate

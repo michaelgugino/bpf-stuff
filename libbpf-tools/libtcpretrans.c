@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <argp.h>
 #include <signal.h>
+#include <stdio.h>
 #include <limits.h>
 #include <unistd.h>
 #include <time.h>
@@ -188,6 +189,7 @@ static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
 		   e->type == RETRANSMIT ? "R" : "L",
 		   remote,
 		   TCPSTATE[e->state - 1]);
+	fflush(stdout);
 	return;
 }
 

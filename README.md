@@ -108,4 +108,6 @@ Now there is a Makefile in libbpf-tools.  Just make that, then build main.go.
 You can use the Dockerfile.rhel if you have suitable access to those images.
 Fedora image WIP.
 
-podman run --privileged -v /sys/kernel/debug/:/sys/kernel/debug/:ro -it 9113e82f2af3f55c6bed3b57a8b6605b444a5e27677aa3b1c5076edbc0548822 /bin/bash
+podman run --privileged --expose 2112 -v /sys/kernel/debug/:/sys/kernel/debug/:ro -it 746b9c3aa1a6ef179cb39fe2b6ed6cf938f2e7ef93cd6d20fdddabc48efc0ad2 /bin/bash
+
+podman push 746b9c3aa1a6ef179cb39fe2b6ed6cf938f2e7ef93cd6d20fdddabc48efc0ad2 docker://quay.io/mgugino.redhat/bpf-stuff:latest
