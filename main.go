@@ -8,10 +8,8 @@ package main
 import "C"
 
 import (
-	"fmt"
 	"net/http"
     "os"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -34,8 +32,6 @@ func gocb(arg1 int) {
 }
 
 func main() {
-
-
     http.Handle("/metrics", promhttp.Handler())
     go http.ListenAndServe(":2112", nil)
 	os.Exit(int(C.run()))
