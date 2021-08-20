@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: tcpretransmetric-daemon
-  namespace: openshift-machine-config-operator
+  namespace: openshift-bpftest
   labels:
     k8s-app: tcpretransmetric-daemon
 spec:
@@ -64,7 +64,7 @@ spec:
             sleep 5
           done
 
-          echo $(date -Iseconds) INFO: sdn-metrics-certs mounted, starting kube-rbac-proxy
+          echo $(date -Iseconds) INFO: metrics-certs mounted, starting kube-rbac-proxy
           exec /usr/bin/kube-rbac-proxy \
             --logtostderr \
             --secure-listen-address=:9905 \

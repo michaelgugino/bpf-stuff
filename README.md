@@ -119,5 +119,5 @@ Testing the metrics endpoints
 ./oc exec -n openshift-monitoring -it prometheus-k8s-0 /bin/bash
 
 TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-curl https://tcpretransmetric-daemon-metrics.openshift-machine-config-operator.svc:9905/metrics --cacert /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt --resolve tcpretransmetric-daemon-metrics.openshift-machine-config-operator.svc:9905:10.130.0.48 -H "Authorization: Bearer ${TOKEN}"
+curl https://tcpretransmetric-daemon.openshift-bpftest.svc:9905/metrics --cacert /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt --resolve tcpretransmetric-daemon.openshift-bpftest.svc:9905:10.131.0.21 -H "Authorization: Bearer ${TOKEN}"
 ```
