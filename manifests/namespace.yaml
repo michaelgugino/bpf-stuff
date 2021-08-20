@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    include.release.openshift.io/ibm-cloud-managed: "true"
+    include.release.openshift.io/self-managed-high-availability: "true"
+    include.release.openshift.io/single-node-developer: "true"
+    openshift.io/node-selector: ""
+    openshift.io/sa.scc.mcs: s0:c10,c0
+    openshift.io/sa.scc.supplemental-groups: 1000090000/10000
+    openshift.io/sa.scc.uid-range: 1000090000/10000
+    workload.openshift.io/allowed: management
+  labels:
+    kubernetes.io/metadata.name: openshift-bpftest
+    name: openshift-bpftest
+    openshift.io/cluster-monitoring: "true"
+    openshift.io/run-level: "1"
+  name: openshift-bpftest
+spec:
+  finalizers:
+  - kubernetes

@@ -1,0 +1,46 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: tcpretransmetric-certs
+  labels:
+    k8s-app: tcpretransmetric-daemon
+  name: tcpretransmetric-daemon
+  namespace: openshift-machine-config-operator
+spec:
+  selector:
+    name: tcpretransmetric-daemon
+  type: ClusterIP
+  sessionAffinity: None
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+  - name: tcpretransmetric-daemon-metrics
+    port: 9905
+    protocol: TCP
+    targetPort: 9905
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: tcpretransmetric-daemon
+  name: tcpretransmetric-daemon
+  namespace: openshift-machine-config-operator
+spec:
+  endpoints:
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      interval: 30s
+      port: tcpretransmetric-daemon-metrics
+      scheme: https
+      tlsConfig:
+        caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+        serverName: tcpretransmetric-daemon.openshift-machine-config-operator.svc
+  jobLabel: k8s-app
+  namespaceSelector:
+    matchNames:
+    - openshift-machine-config-operator
+  selector:
+    matchLabels:
+      k8s-app: tcpretransmetric-daemon

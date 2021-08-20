@@ -110,4 +110,14 @@ Fedora image WIP.
 
 podman run --privileged --expose 2112 -v /sys/kernel/debug/:/sys/kernel/debug/:ro -it 746b9c3aa1a6ef179cb39fe2b6ed6cf938f2e7ef93cd6d20fdddabc48efc0ad2 /bin/bash
 
-podman push 746b9c3aa1a6ef179cb39fe2b6ed6cf938f2e7ef93cd6d20fdddabc48efc0ad2 docker://quay.io/mgugino.redhat/bpf-stuff:latest
+podman push ca7efba89a466d118b45804a6add7d64f25aead5f4274acb2d614d773b96a283 docker://quay.io/mgugino.redhat/bpf-stuff:latest
+
+# prometheus
+
+Testing the metrics endpoints
+```sh
+./oc exec -n openshift-monitoring -it prometheus-k8s-0 /bin/bash
+
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+curl https://tcpretransmetric-daemon-metrics.openshift-machine-config-operator.svc:9905/metrics --cacert /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt --resolve tcpretransmetric-daemon-metrics.openshift-machine-config-operator.svc:9905:10.130.0.48 -H "Authorization: Bearer ${TOKEN}"
+```
