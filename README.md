@@ -121,3 +121,6 @@ Testing the metrics endpoints
 TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 curl https://tcpretransmetric-daemon.openshift-bpftest.svc:9905/metrics --cacert /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt --resolve tcpretransmetric-daemon.openshift-bpftest.svc:9905:10.131.0.21 -H "Authorization: Bearer ${TOKEN}"
 ```
+
+# debug printk
+cat /sys/kernel/debug/tracing/trace_pipe

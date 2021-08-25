@@ -270,18 +270,6 @@ int run()
 		}
 	}
 
-	if (!env.lossprobe) {
-		prog = bpf_object__find_program_by_name(obj->obj, "tcp_send_loss_probe");
-		err = bpf_program__set_autoload(prog, false);
-		if (err) {
-			warn("Unable to set autoload for tcp_send_loss_probe\n");
-			return err;
-		}
-	}
-
-	if (env.count)
-		obj->rodata->do_count = true;
-
 	err = tcpretrans_bpf__load(obj);
 	if (err) {
 		warn("failed to load BPF object: %d\n", err);
