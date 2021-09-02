@@ -71,80 +71,10 @@ static int libbpf_print_fn(enum libbpf_print_level level,
 	return vfprintf(stderr, format, args);
 }
 
-static void print_count_ipv4(int map_fd)
-{
-	static struct ipv4_flow_key keys[MAX_ENTRIES];
-	__u32 value_size = sizeof(__u64);
-	__u32 key_size = sizeof(keys[0]);
-	static struct ipv4_flow_key zero;
-	static __u64 counts[MAX_ENTRIES];
-	char s[INET_ADDRSTRLEN];
-	char d[INET_ADDRSTRLEN];
-	__u32 i, n = MAX_ENTRIES;
-	struct in_addr src;
-	struct in_addr dst;
-	char *ep_fmt = "[%s]#%d";
-	char remote[INET_ADDRSTRLEN + 8];
-	char local[INET_ADDRSTRLEN + 8];
-
-	if (dump_hash(map_fd, keys, key_size, counts, value_size, &n, &zero)) {
-		warn("dump_hash: %s", strerror(errno));
-		return;
-	}
-
-	for (i = 0; i < n; i++) {
-		src.s_addr = keys[i].saddr;
-		dst.s_addr = keys[i].daddr;
-		sprintf(local, ep_fmt, inet_ntop(AF_INET, &src, s, sizeof(s)), keys[i].sport);
-		sprintf(remote, ep_fmt, inet_ntop(AF_INET, &dst, d, sizeof(d)), ntohs(keys[i].dport));
-		printf("%-20s <-> %-20s %10llu\n", local, remote, counts[i]);
-	}
-}
-
-static void print_count_ipv6(int map_fd)
-{
-	static struct ipv6_flow_key keys[MAX_ENTRIES];
-	__u32 value_size = sizeof(__u64);
-	__u32 key_size = sizeof(keys[0]);
-	static struct ipv6_flow_key zero;
-	static __u64 counts[MAX_ENTRIES];
-	char s[INET6_ADDRSTRLEN];
-	char d[INET6_ADDRSTRLEN];
-	__u32 i, n = MAX_ENTRIES;
-	struct in6_addr src;
-	struct in6_addr dst;
-	char *ep_fmt = "[%s]#%d";
-	char remote[INET6_ADDRSTRLEN + 8];
-	char local[INET6_ADDRSTRLEN + 8];
-
-	if (dump_hash(map_fd, keys, key_size, counts, value_size, &n, &zero)) {
-		warn("dump_hash: %s", strerror(errno));
-		return;
-	}
-
-	for (i = 0; i < n; i++) {
-		memcpy(src.s6_addr, keys[i].saddr, sizeof(src.s6_addr));
-		memcpy(dst.s6_addr, keys[i].daddr, sizeof(src.s6_addr));
-		sprintf(local, ep_fmt, inet_ntop(AF_INET6, &src, s, sizeof(s)), keys[i].sport);
-		sprintf(remote, ep_fmt, inet_ntop(AF_INET6, &dst, d, sizeof(d)), ntohs(keys[i].dport));
-		printf("%-20s <-> %-20s %10llu\n", local, remote, counts[i]);
-	}
-}
-
-static void print_count(int map_fd_ipv4, int map_fd_ipv6)
-{
-	while (hang_on)
-		pause();
-
-	printf("\n%-25s %-25s %-10s\n", "LADDR:LPORT", "RADDR:RPORT", "RETRANSMITS");
-	print_count_ipv4(map_fd_ipv4);
-	print_count_ipv6(map_fd_ipv6);
-}
-
 static void print_events_header()
 {
-	printf("%-8s %-6s %-2s %-20s %1s> %-20s %-4s\n", "TIME", "PID", "IP",
-		"LADDR:LPORT", "T", "RADDR:RPORT", "STATE");
+	printf("%-8s %-6s %-2s %-20s %1s> %-20s %-12s %-10s\n", "TIME", "PID", "IP",
+		"LADDR:LPORT", "T", "RADDR:RPORT", "STATE", "SEQ");
 }
 
 static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
@@ -181,14 +111,15 @@ static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
 	sprintf(local, "%s:%d", inet_ntop(e->af, &s, src, sizeof(src)), e->sport);
 	sprintf(remote, "%s:%d", inet_ntop(e->af, &d, dst, sizeof(dst)), ntohs(e->dport));
 
-	printf("%-8s %-6d %-2d %-20s %1s> %-20s %s\n",
+	printf("%-8s %-6d %-2d %-20s %1s> %-20s %-12s %-10u\n",
 		   ts,
 		   e->pid,
 		   e->af == AF_INET ? 4 : 6,
 		   local,
 		   e->type == RETRANSMIT ? "R" : "L",
 		   remote,
-		   TCPSTATE[e->state - 1]);
+		   TCPSTATE[e->state - 1],
+	       e->seq);
 	fflush(stdout);
 	return;
 }
@@ -287,12 +218,7 @@ int run()
 		goto cleanup;
 	}
 	printf("Tracing retransmits ... Hit Ctrl-C to end\n");
-	if (env.count) {
-		print_count(bpf_map__fd(obj->maps.ipv4_count),
-			bpf_map__fd(obj->maps.ipv6_count));
-	} else {
-		print_events(bpf_map__fd(obj->maps.events));
-	}
+	print_events(bpf_map__fd(obj->maps.events));
 
 cleanup:
 	tcpretrans_bpf__destroy(obj);

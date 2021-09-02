@@ -97,15 +97,15 @@ static int trace_event(void *ctx, const struct sock *skp, const struct sk_buff *
 	if (skp == NULL)
 		return 0;
 
+	seq = 0;
 	if (skb) {
 		// https://elixir.bootlin.com/linux/v4.0/source/net/ipv4/tcp_output.c#L921
 		// tcb = ((struct tcp_skb_cb *)&((skb)->cb[0]));
 		cb = (BPF_CORE_READ(skb,cb));
 		tcb = (struct tcp_skb_cb *)&cb[0];
 		seq = BPF_CORE_READ(tcb, seq);
-
-		bpf_printk("seq2 %ld.\n", seq);
 	}
+	e.seq = seq;
 
 	family = BPF_CORE_READ(skp, __sk_common.skc_family);
 
